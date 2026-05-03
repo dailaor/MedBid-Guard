@@ -13,13 +13,13 @@
           <p class="eyebrow">MedBid Guard / Medical Tender QA</p>
           <h1>医疗设备投标材料 AI 资格预审 MVP</h1>
           <p class="hero-copy">
-            面向医疗设备与医用耗材投标场景，提前发现资格缺失、证照不一致、授权不覆盖、技术参数负偏离和格式附件问题。
+            面向医疗设备与医用耗材投标场景，提供规则审查与可选模型增强能力，用于在正式递交前识别资格缺失、证照不一致、授权覆盖不足、技术响应风险和格式附件问题。
           </p>
         </div>
         <div class="hero-stack">
           <span class="status-pill">零依赖 Node 可运行</span>
-          <span class="status-pill">文本材料优先</span>
-          <span class="status-pill">规则引擎 + 人工复核提示</span>
+          <span class="status-pill">支持 OpenAI 兼容推理服务</span>
+          <span class="status-pill">规则审查 + 模型增强</span>
         </div>
       </header>
 
@@ -28,6 +28,10 @@
           <div class="panel-head">
             <h2>输入材料</h2>
             <p>上传文本材料，或手动粘贴关键章节。PDF/扫描件会被标记为需 OCR/人工复核。</p>
+          </div>
+
+          <div id="capabilityBanner" class="capability-banner empty-state">
+            正在检测推理服务配置...
           </div>
 
           <label class="field">
@@ -71,7 +75,7 @@
         <section class="panel results">
           <div class="panel-head">
             <h2>审查结果</h2>
-            <p>结果包含结构化目录、问题定位、风险等级与补充建议。</p>
+            <p>结果包含结构化目录、问题定位、风险等级、规则审查结论以及可选的模型增强建议。</p>
           </div>
 
           <div id="summaryCards" class="summary-grid empty-state">
@@ -91,6 +95,15 @@
                 <h3>优先处理建议</h3>
               </div>
               <div id="nextActions" class="action-list empty-state">暂无数据</div>
+            </div>
+          </div>
+
+          <div class="result-block">
+            <div class="section-title">
+              <h3>模型增强结论</h3>
+            </div>
+            <div id="aiReview" class="empty-state">
+              当前尚未执行分析。
             </div>
           </div>
 
