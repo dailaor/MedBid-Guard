@@ -1,0 +1,11 @@
+{
+  "name": "medbid-guard-mvp",
+  "version": "0.1.0",
+  "description": "MedBid Guard MVP for medical-device tender qualification review",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MedBid Guard MVP</title>
+    <link rel="stylesheet" href="/public/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero panel">
+        <div>
+          <p class="eyebrow">MedBid Guard / Medical Tender QA</p>
+          <h1>医疗设备投标材料 AI 资格预审 MVP</h1>
+          <p class="hero-copy">
+            面向医疗设备与医用耗材投标场景，提前发现资格缺失、证照不一致、授权不覆盖、技术参数负偏离和格式附件问题。
+          </p>
+        </div>
+        <div class="hero-stack">
+          <span class="status-pill">零依赖 Node 可运行</span>
+          <span class="status-pill">文本材料优先</span>
+          <span class="status-pill">规则引擎 + 人工复核提示</span>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel composer">
+          <div class="panel-head">
+            <h2>输入材料</h2>
+            <p>上传文本材料，或手动粘贴关键章节。PDF/扫描件会被标记为需 OCR/人工复核。</p>
+          </div>
+
+          <label class="field">
+            <span>项目名称</span>
+            <input id="projectName" type="text" value="XX医院超声骨密度检测仪采购项目" />
+          </label>
+
+          <div class="actions-row">
+            <label class="file-button">
+              <input id="fileInput" type="file" multiple />
+              导入本地材料
+            </label>
+            <button id="loadSampleBtn" class="ghost-button" type="button">载入示例包</button>
+          </div>
+
+          <div class="manual-editor">
+            <label class="field">
+              <span>临时材料标题</span>
+              <input id="manualTitle" type="text" placeholder="例如：投标人承诺函.txt" />
+            </label>
+            <label class="field">
+              <span>临时材料内容</span>
+              <textarea id="manualContent" rows="7" placeholder="把招标要求、技术响应、授权内容或承诺函内容直接粘贴到这里。"></textarea>
+            </label>
+            <button id="addManualBtn" type="button">添加文本材料</button>
+          </div>
+
+          <div class="document-list-wrap">
+            <div class="section-title">
+              <h3>当前材料</h3>
+              <span id="docCounter">0 份</span>
+            </div>
+            <div id="documentList" class="document-list empty-state">
+              还没有材料，先载入示例或上传文本文件。
+            </div>
+          </div>
+
+          <button id="analyzeBtn" class="primary-button" type="button">开始质检</button>
+        </section>
+
+        <section class="panel results">
+          <div class="panel-head">
+            <h2>审查结果</h2>
+            <p>结果包含结构化目录、问题定位、风险等级与补充建议。</p>
+          </div>
+
+          <div id="summaryCards" class="summary-grid empty-state">
+            完成分析后，这里会显示风险总览。
+          </div>
+
+          <div class="result-columns">
+            <div class="result-block">
+              <div class="section-title">
+                <h3>关键事实</h3>
+              </div>
+              <div id="factChips" class="chip-list empty-state">暂无数据</div>
+            </div>
+
+            <div class="result-block">
+              <div class="section-title">
+                <h3>优先处理建议</h3>
+              </div>
+              <div id="nextActions" class="action-list empty-state">暂无数据</div>
+            </div>
+          </div>
+
+          <div class="result-block">
+            <div class="section-title">
+              <h3>问题清单</h3>
+            </div>
+            <div id="findingList" class="finding-list empty-state">暂无数据</div>
+          </div>
+
+          <div class="result-block">
+            <div class="section-title">
+              <h3>结构化标书目录</h3>
+            </div>
+            <div id="catalogTable" class="catalog-table empty-state">暂无数据</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/public/app.js"></script>
+  </body>
+</html>
