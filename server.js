@@ -1,10 +1,14 @@
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
-const { analyzeBidPackage } = require("./lib/analyzer");
+const ROOT_DIR = __dirname;
+const { loadEnvFile } = require("./lib/env-loader");
+const { getLlmCapability, getLlmConfig } = require("./lib/llm-provider");
+const { runReviewPipeline } = require("./lib/review-pipeline");
+
+loadEnvFile(ROOT_DIR);
 
 const PORT = Number(process.env.PORT || 3000);
-const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 
 const MIME_TYPES = {
@@ -98,7 +102,8 @@ const server = http.createServer(async (request, response) => {
     sendJson(response, 200, {
       status: "ok",
       service: "medbid-guard-mvp",
-      port: PORT
+      port: PORT,
+      llm: getLlmCapability(getLlmConfig())
     });
     return;
   }
@@ -106,7 +111,7 @@ const server = http.createServer(async (request, response) => {
   if (request.method === "POST" && request.url === "/api/analyze") {
     try {
       const payload = await readJsonBody(request);
-      const result = analyzeBidPackage(payload);
+      const result = await runReviewPipeline(payload);
       sendJson(response, 200, result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
