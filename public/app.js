@@ -1,6 +1,7 @@
 const state = {
   documents: [],
-  lastResult: null
+  lastResult: null,
+  capabilities: null
 };
 
 const elements = {
@@ -11,11 +12,13 @@ const elements = {
   manualContent: document.getElementById("manualContent"),
   addManualBtn: document.getElementById("addManualBtn"),
   analyzeBtn: document.getElementById("analyzeBtn"),
+  capabilityBanner: document.getElementById("capabilityBanner"),
   documentList: document.getElementById("documentList"),
   docCounter: document.getElementById("docCounter"),
   summaryCards: document.getElementById("summaryCards"),
   factChips: document.getElementById("factChips"),
   nextActions: document.getElementById("nextActions"),
+  aiReview: document.getElementById("aiReview"),
   findingList: document.getElementById("findingList"),
   catalogTable: document.getElementById("catalogTable")
 };
@@ -117,6 +120,22 @@ elements.analyzeBtn.addEventListener("click", async () => {
 
 renderDocuments();
 renderResults(null);
+loadCapabilities();
+
+async function loadCapabilities() {
+  try {
+    const response = await fetch("/api/health");
+    const payload = await response.json();
+    state.capabilities = payload;
+    renderCapabilityBanner(payload.llm);
+  } catch (error) {
+    elements.capabilityBanner.className = "capability-banner";
+    elements.capabilityBanner.innerHTML = `
+      <strong>推理服务状态读取失败</strong>
+      <p>${escapeHtml(error.message)}</p>
+    `;
+  }
+}
 
 async function fileToDocument(file) {
   const extension = getExtension(file.name);
@@ -129,6 +148,39 @@ async function fileToDocument(file) {
     type: file.type || "application/octet-stream",
     size: file.size
   };
+}
+
+function renderCapabilityBanner(llm) {
+  if (!llm) {
+    elements.capabilityBanner.className = "capability-banner";
+    elements.capabilityBanner.innerHTML = `
+      <strong>未获取到推理服务配置</strong>
+      <p>当前仅显示基础运行状态，未检测到可用的推理服务信息。</p>
+    `;
+    return;
+  }
+
+  const phases = (llm.usagePhases || [])
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("");
+
+  if (llm.configured) {
+    elements.capabilityBanner.className = "capability-banner";
+    elements.capabilityBanner.innerHTML = `
+      <strong>已配置模型增强</strong>
+      <p>当前检测到 ${escapeHtml(llm.providerLabel)}，模型为 <code>${escapeHtml(llm.model || "unknown")}</code>。系统会在以下环节调用推理服务：</p>
+      <ul>${phases}</ul>
+    `;
+    return;
+  }
+
+  const missing = (llm.missing || []).map((item) => `<code>${escapeHtml(item)}</code>`).join(" / ");
+  elements.capabilityBanner.className = "capability-banner";
+  elements.capabilityBanner.innerHTML = `
+    <strong>当前运行模式：规则引擎</strong>
+    <p>尚未检测到完整的推理服务配置。配置 ${missing || "<code>LLM_API_KEY</code> / <code>LLM_MODEL</code>"} 后，系统会在以下环节启用模型增强：</p>
+    <ul>${phases}</ul>
+  `;
 }
 
 function renderDocuments() {
@@ -179,6 +231,8 @@ function renderResults(result) {
     elements.factChips.textContent = "暂无数据";
     elements.nextActions.className = "action-list empty-state";
     elements.nextActions.textContent = "暂无数据";
+    elements.aiReview.className = "empty-state";
+    elements.aiReview.textContent = "当前尚未执行分析。";
     elements.findingList.className = "finding-list empty-state";
     elements.findingList.textContent = "暂无数据";
     elements.catalogTable.className = "catalog-table empty-state";
@@ -186,13 +240,20 @@ function renderResults(result) {
     return;
   }
 
-  const { summary, keyFacts, nextActions, findings, structuredCatalog } = result;
+  const { summary, keyFacts, nextActions, findings, structuredCatalog, pipeline, aiReview } = result;
+  const llmStatusText = formatLlmStatus(pipeline?.llm);
+
   elements.summaryCards.className = "summary-grid";
   elements.summaryCards.innerHTML = [
     {
       label: "总体风险",
       value: summary.overallLevel,
       helper: summary.overview
+    },
+    {
+      label: "审查模式",
+      value: pipeline?.mode === "rule_plus_llm" ? "规则 + 模型" : "规则引擎",
+      helper: llmStatusText
     },
     {
       label: "高风险问题",
@@ -245,6 +306,8 @@ function renderResults(result) {
       `).join("")
     : "暂无数据";
 
+  renderAiReview(aiReview, pipeline?.llm);
+
   elements.findingList.className = findings.length > 0 ? "finding-list" : "finding-list empty-state";
   elements.findingList.innerHTML = findings.length > 0
     ? findings.map((finding) => `
@@ -294,6 +357,58 @@ function renderResults(result) {
   `;
 }
 
+function renderAiReview(aiReview, llm) {
+  if (aiReview && aiReview.status === "applied") {
+    const focusChips = (aiReview.focusAreas || []).map((item) => `<span class="fact-chip">${escapeHtml(item)}</span>`).join("");
+    const findings = (aiReview.findings || []).map((finding) => `
+      <article class="finding-card">
+        <header>
+          <div>
+            <h4>${escapeHtml(finding.title)}</h4>
+            <p>${escapeHtml(finding.type)} / ${escapeHtml(finding.location)}</p>
+          </div>
+          <span class="risk-chip risk-${finding.severity}">${severityLabel(finding.severity)}</span>
+        </header>
+        <p><strong>证据：</strong>${escapeHtml(finding.evidence)}</p>
+        <p><strong>建议：</strong>${escapeHtml(finding.recommendation)}</p>
+      </article>
+    `).join("");
+    const manualItems = (aiReview.manualReviewItems || []).map((item) => `
+      <article class="manual-review-card">
+        <h4>${escapeHtml(item.item)}</h4>
+        <p><strong>原因：</strong>${escapeHtml(item.reason)}</p>
+        <p><strong>建议补充：</strong>${escapeHtml(item.suggestedMaterial)}</p>
+      </article>
+    `).join("");
+
+    elements.aiReview.className = "ai-review-wrap";
+    elements.aiReview.innerHTML = `
+      <article class="ai-summary-card">
+        <h4>模型摘要</h4>
+        <p>${escapeHtml(aiReview.summary)}</p>
+      </article>
+      <div class="chip-list">${focusChips || '<span class="fact-chip">模型未返回额外关注点</span>'}</div>
+      <div class="finding-list">${findings || '<div class="empty-state">模型未识别到新增语义风险。</div>'}</div>
+      <div class="manual-review-list">${manualItems || '<div class="empty-state">模型未返回额外人工复核项。</div>'}</div>
+    `;
+    return;
+  }
+
+  const phases = (llm?.usagePhases || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  const statusText = llm?.status === "error"
+    ? `推理服务调用失败：${escapeHtml(llm.error || "未知错误")}`
+    : "当前未执行模型增强，系统仅展示规则引擎结论。";
+
+  elements.aiReview.className = "empty-state";
+  elements.aiReview.innerHTML = `
+    <div>
+      <p>${statusText}</p>
+      <p class="subtle-note">配置推理服务后，模型将主要参与以下环节：</p>
+      <ul>${phases}</ul>
+    </div>
+  `;
+}
+
 function decorateFactGroup(label, values) {
   return (values || []).map((value) => `${label}：${value}`);
 }
@@ -318,6 +433,26 @@ function severityLabel(severity) {
   if (severity === "high") return "高风险";
   if (severity === "medium") return "中风险";
   return "低风险";
+}
+
+function formatLlmStatus(llm) {
+  if (!llm) {
+    return "未读取到推理服务状态。";
+  }
+
+  if (llm.status === "applied") {
+    return `已调用 ${llm.providerLabel}（${llm.model || "unknown"}）完成语义增强审查。`;
+  }
+
+  if (llm.status === "error") {
+    return `推理服务调用失败，已回退到规则引擎：${llm.error || "未知错误"}`;
+  }
+
+  if (llm.configured) {
+    return `已检测到 ${llm.providerLabel} 配置。`;
+  }
+
+  return "未配置推理服务，当前仅运行规则引擎。";
 }
 
 function getExtension(filename) {
